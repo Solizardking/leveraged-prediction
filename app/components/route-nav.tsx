@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type PrimaryRoute = "trade" | "liquidity" | "leaderboard" | "privacy" | "oracle";
+type PrimaryRoute = "trade" | "liquidity" | "leaderboard" | "privacy" | "oracle" | "poly";
 
 export function RouteNav({ active }: { active: PrimaryRoute }) {
   return (
@@ -34,6 +34,9 @@ export function RouteNav({ active }: { active: PrimaryRoute }) {
       >
         <span className="route-label-full">Oracle markets</span>
         <span className="route-label-short" aria-hidden="true">Oracle</span>
+      </Link>
+      <Link href="/poly" aria-current={active === "poly" ? "page" : undefined}>
+        Poly
       </Link>
     </nav>
   );
