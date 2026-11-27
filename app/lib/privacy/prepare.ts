@@ -15,6 +15,8 @@ import {
 } from "@/app/lib/privacy/constants";
 import type { PreparedPrivacyAction } from "@/app/lib/privacy/types";
 
+export type { PreparedPrivacyAction };
+
 export class PrivacyPrepareError extends Error {
   constructor(message: string) {
     super(message);
