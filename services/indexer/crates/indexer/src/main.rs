@@ -628,7 +628,7 @@ mod tests {
         let (market, _) = Pubkey::find_program_address(&[b"market", &market_id], &PROGRAM_ID);
         assert_eq!(
             market.to_string(),
-            "6ME7jFHJkk27zAM7hz2A3V1Y4EeTkcjyZxnekQLtn8V1"
+            "9FPJFbNVemzR4jTGzWjr2iMF6RB774auKRaZWnApRoU7"
         );
     }
 

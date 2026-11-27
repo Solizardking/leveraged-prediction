@@ -58,7 +58,7 @@ pub async fn replay(database_url: &str) -> Result<FixtureReport> {
                 &source,
                 PROGRAM_ID,
                 1,
-                "6ME7jFHJkk27zAM7hz2A3V1Y4EeTkcjyZxnekQLtn8V1",
+                "9FPJFbNVemzR4jTGzWjr2iMF6RB774auKRaZWnApRoU7",
                 9,
                 "fixture-market-pool-hash",
                 90_000_000,
