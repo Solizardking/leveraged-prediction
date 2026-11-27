@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type PrimaryRoute = "trade" | "liquidity" | "leaderboard";
+type PrimaryRoute = "trade" | "liquidity" | "leaderboard" | "privacy";
 
 export function RouteNav({ active }: { active: PrimaryRoute }) {
   return (
@@ -21,6 +21,12 @@ export function RouteNav({ active }: { active: PrimaryRoute }) {
       >
         <span className="route-label-full">Leaderboard</span>
         <span className="route-label-short" aria-hidden="true">Leaders</span>
+      </Link>
+      <Link
+        href="/privacy"
+        aria-current={active === "privacy" ? "page" : undefined}
+      >
+        Privacy
       </Link>
     </nav>
   );
