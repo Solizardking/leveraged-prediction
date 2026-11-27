@@ -37,12 +37,12 @@ describe("MagicBlock PriceUpdateV2 view", () => {
     expect(() => decodeOraclePrice(update, feedId, 103)).toThrow(/stale or invalid/);
   });
 
-  it("tolerates one second of publisher clock skew but rejects more", () => {
+  it("tolerates five seconds of publisher clock skew but rejects more", () => {
     const feedId = Buffer.alloc(32, 7);
-    const update = fullPriceUpdate(feedId, 101);
+    const update = fullPriceUpdate(feedId, 105);
 
     expect(decodeOraclePrice(update, feedId, 100).ageSeconds).toBe(0);
-    expect(() => decodeOraclePrice(fullPriceUpdate(feedId, 102), feedId, 100)).toThrow(
+    expect(() => decodeOraclePrice(fullPriceUpdate(feedId, 106), feedId, 100)).toThrow(
       /stale or invalid/,
     );
   });

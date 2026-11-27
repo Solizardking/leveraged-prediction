@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
-import type { MarketSnapshot, SnapshotError } from "@/app/lib/domain";
+import type { MarketSnapshot } from "@/app/lib/domain";
+import { fetchMarketSnapshot } from "@/app/lib/live/snapshot-client";
 import {
   applyOracleStreamUpdate,
   feedHealthAt,
@@ -86,12 +87,7 @@ export function useGameSnapshot(walletAddress: string | null) {
     if (requestInFlight.current) return;
     requestInFlight.current = true;
     try {
-      const query = walletAddress ? `?wallet=${encodeURIComponent(walletAddress)}` : "";
-      const response = await fetch(`/api/snapshot${query}`, { cache: "no-store" });
-      const body = (await response.json()) as MarketSnapshot | SnapshotError;
-      if (!response.ok || "error" in body) {
-        throw new Error("error" in body ? body.error : `Snapshot failed (${response.status})`);
-      }
+      const body = await fetchMarketSnapshot(walletAddress);
       setSnapshot((current) => {
         const stream = streamRef.current;
         const currentKey = current ? oracleStreamKey(current) : null;

@@ -26,7 +26,24 @@ import {
 export const DEVNET_FAUCET_SOL_LAMPORTS = 100_000_000;
 export const DEVNET_FAUCET_USDC_MINOR = 100_000_000n;
 const MAX_CONCURRENT_WALLETS = 4;
+export const DEVNET_FAUCET_COOLDOWN_MS = 60_000;
 const inFlightFunding = new Map<string, Promise<DevnetFaucetResult>>();
+const lastFundedAt = new Map<string, number>();
+
+export function faucetCooldownRemainingMs(wallet: string, now = Date.now()): number {
+  const last = lastFundedAt.get(wallet);
+  if (last === undefined) return 0;
+  return Math.max(0, last + DEVNET_FAUCET_COOLDOWN_MS - now);
+}
+
+export function rememberFaucetFunding(wallet: string, now = Date.now()): void {
+  lastFundedAt.set(wallet, now);
+}
+
+export function resetFaucetCooldownForTests(): void {
+  lastFundedAt.clear();
+  inFlightFunding.clear();
+}
 
 export interface DevnetFaucetResult {
   ok: boolean;
@@ -280,12 +297,23 @@ async function fundWallet(wallet: PublicKey): Promise<DevnetFaucetResult> {
 
 export async function fundDevnetWallet(wallet: PublicKey): Promise<DevnetFaucetResult> {
   const key = wallet.toBase58();
+  const remaining = faucetCooldownRemainingMs(key);
+  if (remaining > 0) {
+    throw new Error(
+      `The test-funds faucet is cooling down; try again in ${Math.ceil(remaining / 1000)}s`,
+    );
+  }
   const existing = inFlightFunding.get(key);
   if (existing) return existing;
   if (inFlightFunding.size >= MAX_CONCURRENT_WALLETS) {
     throw new Error("The test-funds faucet is busy; try again in a few seconds");
   }
-  const pending = fundWallet(wallet).finally(() => inFlightFunding.delete(key));
+  const pending = fundWallet(wallet)
+    .then((result) => {
+      rememberFaucetFunding(key);
+      return result;
+    })
+    .finally(() => inFlightFunding.delete(key));
   inFlightFunding.set(key, pending);
   return pending;
 }
