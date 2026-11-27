@@ -356,7 +356,7 @@ async fn seed(storage: &Storage, source_id: i64) -> Result<()> {
     )
     .bind(NETWORK)
     .bind(PROGRAM_ID)
-    .bind("6ME7jFHJkk27zAM7hz2A3V1Y4EeTkcjyZxnekQLtn8V1")
+    .bind("9FPJFbNVemzR4jTGzWjr2iMF6RB774auKRaZWnApRoU7")
     .bind(source_id)
     .execute(&mut *tx)
     .await?;
