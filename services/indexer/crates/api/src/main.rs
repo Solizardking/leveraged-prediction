@@ -10,7 +10,7 @@ use solana_pubkey::Pubkey;
 use tower::limit::ConcurrencyLimitLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
-const DEFAULT_PROGRAM_ID: &str = "AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr";
+const DEFAULT_PROGRAM_ID: &str = "LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz";
 
 #[derive(Debug, Parser)]
 #[command(name = "leveraged-prediction-api")]

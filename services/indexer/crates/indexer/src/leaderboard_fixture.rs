@@ -9,7 +9,7 @@ use sqlx::postgres::PgListener;
 use crate::projections::leaderboards::{self, RefreshReport};
 
 const NETWORK: &str = "api-fixture";
-const PROGRAM_ID: &str = "AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr";
+const PROGRAM_ID: &str = "LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz";
 const USER_A: &str = "9g9n7TArsFPw7GvPuU8d5NTSAv1mr1gdfDhu97LqryBw";
 const USER_B: &str = "GmaDrppBC7CeZibMYcvYQiVLn9kNnV9HRDBtTRb9HqvW";
 

@@ -38,7 +38,7 @@ solana program dump -u devnet \
 (
   cd "$RUN_DIR"
   exec mb-stack --reset \
-    --upgradeable-program AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr \
+    --upgradeable-program LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz \
     "$REPO_ROOT/target/deploy/leveraged_prediction.so" \
     653bMLonrEbTNbSM9g1vH8PJATH1uh6wYNr9SYEJSzsY \
     --bpf-program PriCems5tHihc6UDXDjzjeawomAwBduWMGAi8ZUjppd \
