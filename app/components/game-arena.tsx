@@ -15,7 +15,13 @@ import { useGameSession } from "@/app/hooks/use-game-session";
 import { usePlayTransaction } from "@/app/hooks/use-play-transaction";
 import { useDevnetFaucet } from "@/app/hooks/use-devnet-faucet";
 import { usePersistentPositions } from "@/app/hooks/use-persistent-positions";
+import { usePythMarket } from "@/app/hooks/use-pyth-market";
+import { ImperialOrderPanel } from "@/app/components/imperial-order-panel";
+import { MarketSwitcher } from "@/app/components/market-switcher";
+import { PrivateBalancePanel } from "@/app/components/private-balance-panel";
+import { PythPriceChart } from "@/app/components/pyth-price-chart";
 import type { Direction } from "@/app/lib/domain";
+import { DEFAULT_PYTH_SYMBOL, isLeverGameSymbol } from "@/app/lib/pyth/symbols";
 
 function compactAddress(address: string): string {
   return address.length > 12 ? `${address.slice(0, 4)}…${address.slice(-4)}` : address;
@@ -41,6 +47,9 @@ export function GameArena() {
   const [clock, setClock] = useState<number | null>(null);
   const [sessionPrompted, setSessionPrompted] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [selectedSymbol, setSelectedSymbol] = useState(DEFAULT_PYTH_SYMBOL);
+  const pyth = usePythMarket(selectedSymbol);
+  const leverGameActive = isLeverGameSymbol(selectedSymbol);
 
   useEffect(() => {
     const tick = () => setClock(Date.now());
@@ -64,6 +73,12 @@ export function GameArena() {
   }, [connectWallet, walletAddress]);
 
   const now = clock ?? snapshot?.capturedAt ?? 0;
+  const displayPrice = leverGameActive
+    ? snapshot?.currentPrice ?? null
+    : pyth.price?.price ?? null;
+  const displayLabel = leverGameActive
+    ? snapshot?.marketLabel
+    : pyth.listing?.pyth.label ?? selectedSymbol;
 
   const persistent = usePersistentPositions(
     wallet.address,
@@ -201,54 +216,89 @@ export function GameArena() {
         <div className="stage">
           <section className="quote">
             <div className="quote-top">
-              <span className="eyebrow">{snapshot.marketLabel}</span>
-              <span className={`feed-pill ${snapshot.feedHealth}`}>
+              <span className="eyebrow">{displayLabel}</span>
+              <span className={`feed-pill ${leverGameActive ? snapshot.feedHealth : pyth.price ? "live" : "offline"}`}>
                 <i aria-hidden="true" />
-                {snapshot.feedHealth === "live"
-                  ? `Live · ${snapshot.feedAgeSeconds.toFixed(1)}s`
-                  : snapshot.feedHealth === "delayed"
-                    ? `Delayed · last update ${snapshot.feedAgeSeconds.toFixed(0)}s ago`
-                    : "Offline"}
+                {leverGameActive
+                  ? snapshot.feedHealth === "live"
+                    ? `Live · ${snapshot.feedAgeSeconds.toFixed(1)}s`
+                    : snapshot.feedHealth === "delayed"
+                      ? `Delayed · last update ${snapshot.feedAgeSeconds.toFixed(0)}s ago`
+                      : "Offline"
+                  : pyth.price
+                    ? "Live · Pyth Pro"
+                    : "Waiting for Pyth"}
               </span>
             </div>
-            <h1 className="num">${snapshot.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h1>
-            {change !== null ? (
+            <MarketSwitcher
+              symbol={selectedSymbol}
+              listings={pyth.listings}
+              onChange={setSelectedSymbol}
+            />
+            <h1 className="num">{displayPrice === null ? "—" : `$${displayPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: displayPrice >= 100 ? 2 : 6 })}`}</h1>
+            {leverGameActive && change !== null ? (
               <span className={`chg num ${change >= 0 ? "positive" : "negative"}`}>
                 {change >= 0 ? "▲" : "▼"} ${Math.abs(change).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({changePct.toFixed(3)}%) · last 40s
               </span>
-            ) : (
+            ) : leverGameActive ? (
               <span className="chg">10-second plays · 1000× sensitivity</span>
+            ) : (
+              <span className="chg">Pyth Pro chart · 10-second Lever plays stay on Bitcoin</span>
             )}
+            {pyth.error ? <p className="chg">{pyth.error}</p> : null}
           </section>
-          <PriceArena
-            snapshot={snapshot}
-            plays={plays}
-            now={now}
-            celebratingIds={persistent.celebratingIds}
-          />
+          {leverGameActive ? (
+            <PriceArena
+              snapshot={snapshot}
+              plays={plays}
+              now={now}
+              celebratingIds={persistent.celebratingIds}
+            />
+          ) : (
+            <PythPriceChart
+              bars={pyth.bars}
+              lastPrice={pyth.price?.price ?? null}
+              label={displayLabel ?? selectedSymbol}
+            />
+          )}
         </div>
 
         <aside className="rail">
-          <CommandDeck
-            snapshot={snapshot}
-            occupiedPositions={occupiedPositions}
-            busy={transaction.busy}
-            sessionReady={session.ready}
-            submissionReady={transaction.submissionReady}
-            sessionAllowanceUsd={session.remainingAllowanceUsd}
-            statusMessage={transaction.statusMessage}
-            needsRecovery={transaction.needsRecovery}
-            onRecover={() => void transaction.recover()}
-            onPlay={placePlay}
+          {leverGameActive ? (
+            <>
+              <CommandDeck
+                snapshot={snapshot}
+                occupiedPositions={occupiedPositions}
+                busy={transaction.busy}
+                sessionReady={session.ready}
+                submissionReady={transaction.submissionReady}
+                sessionAllowanceUsd={session.remainingAllowanceUsd}
+                statusMessage={transaction.statusMessage}
+                needsRecovery={transaction.needsRecovery}
+                onRecover={() => void transaction.recover()}
+                onPlay={placePlay}
+              />
+              <YourPlays
+                plays={plays}
+                now={now}
+                celebratingIds={persistent.celebratingIds}
+                fallbackClaimableUsd={snapshot.fallbackClaimableUsd}
+                claimBusy={transaction.claimBusy}
+                onClaimFallback={() => void transaction.claimFallback()}
+              />
+            </>
+          ) : (
+            <section className="aux-panel">
+              <span className="eyebrow">Lever arena</span>
+              <p>Ten-second Up/Down plays stay on the Bitcoin market. Switch back to Bitcoin to play.</p>
+            </section>
+          )}
+          <ImperialOrderPanel
+            listing={pyth.listing}
+            tradingEnabled={pyth.tradingEnabled}
+            walletAddress={wallet.address}
           />
-          <YourPlays
-            plays={plays}
-            now={now}
-            celebratingIds={persistent.celebratingIds}
-            fallbackClaimableUsd={snapshot.fallbackClaimableUsd}
-            claimBusy={transaction.claimBusy}
-            onClaimFallback={() => void transaction.claimFallback()}
-          />
+          <PrivateBalancePanel walletAddress={wallet.address} />
         </aside>
       </div>
 

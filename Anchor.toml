@@ -11,8 +11,8 @@ leveraged_prediction = "AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr"
 [programs.devnet]
 leveraged_prediction = "AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr"
 
-[registry]
-url = "https://api.apr.dev"
+# The [registry] / api.apr.dev section was removed in Anchor 1.0.
+# Verified-build status is at https://verify.osec.io/status/<PROGRAM_ID>.
 
 [provider]
 cluster = "localnet"

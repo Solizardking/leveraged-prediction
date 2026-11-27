@@ -3,10 +3,9 @@
 Source of truth for all UI in this repo. Every screen, component, and copy change must follow this
 document; when something isn't covered here, extend this file first, then implement.
 
-Reference implementation: the "Lever" prototype — `docs/lever-prototype.html` in this repo (also
-published as a private artifact:
-`https://claude.ai/code/artifact/de01ae86-3d92-4cf9-8df4-9aa9f305bd14`). This document supersedes
-the current arcade-styled UI ("Price Arena" / command-deck look), which is being replaced.
+Reference implementation: the "Lever" prototype in this repo at `docs/lever-prototype.html`.
+This document supersedes the current arcade-styled UI ("Price Arena" / command-deck look), which
+is being replaced.
 
 "Lever" is the working brand name; final naming is still open (see workspace TODO). The design
 does not depend on the name.

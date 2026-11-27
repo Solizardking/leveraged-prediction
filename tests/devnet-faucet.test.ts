@@ -4,6 +4,10 @@ import {
   decodeDevnetFaucetAuthorityBase64,
   isTrustedDevnetRpc,
   requiredTopUp,
+  faucetCooldownRemainingMs,
+  rememberFaucetFunding,
+  resetFaucetCooldownForTests,
+  DEVNET_FAUCET_COOLDOWN_MS,
 } from "@/app/lib/live/devnet-faucet";
 
 describe("devnet faucet policy", () => {
@@ -37,5 +41,17 @@ describe("devnet faucet policy", () => {
     expect(() => decodeDevnetFaucetAuthorityBase64(Buffer.from("[1,2,3]").toString("base64"))).toThrow(
       "64-byte Solana keypair",
     );
+  });
+});
+
+describe("devnet faucet cooldown", () => {
+  it("enforces a per-wallet cooldown after a funding attempt is recorded", () => {
+    resetFaucetCooldownForTests();
+    const wallet = "CooldownWallet11111111111111111111111111111";
+    const now = 1_000_000;
+    expect(faucetCooldownRemainingMs(wallet, now)).toBe(0);
+    rememberFaucetFunding(wallet, now);
+    expect(faucetCooldownRemainingMs(wallet, now)).toBe(DEVNET_FAUCET_COOLDOWN_MS);
+    expect(faucetCooldownRemainingMs(wallet, now + DEVNET_FAUCET_COOLDOWN_MS)).toBe(0);
   });
 });

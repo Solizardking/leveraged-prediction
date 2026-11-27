@@ -5,7 +5,7 @@ import { ORACLE_PROGRAM_ID } from "@/app/lib/live/config";
 
 export const ORACLE_EXPONENT = 8;
 export const ORACLE_MAX_AGE_SECONDS = 2;
-const ORACLE_MAX_FUTURE_SKEW_SECONDS = 1;
+export const ORACLE_MAX_FUTURE_SKEW_SECONDS = 5;
 const ORACLE_MAX_CONFIDENCE_BPS = 1;
 const PRICE_SCALE = 10 ** ORACLE_EXPONENT;
 const PYTH_PRICE_UPDATE_DISCRIMINATOR = accountDiscriminator("PriceUpdateV2");
