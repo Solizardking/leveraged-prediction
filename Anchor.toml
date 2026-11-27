@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-leveraged_prediction = "AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr"
+leveraged_prediction = "LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz"
 
 [programs.devnet]
-leveraged_prediction = "AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr"
+leveraged_prediction = "LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz"
 
 # The [registry] / api.apr.dev section was removed in Anchor 1.0.
 # Verified-build status is at https://verify.osec.io/status/<PROGRAM_ID>.

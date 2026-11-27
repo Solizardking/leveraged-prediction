@@ -13,7 +13,7 @@ import {
   requestWithdrawalInstruction,
 } from "@/app/lib/live/instructions";
 
-const PROGRAM_ID = new PublicKey("AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr");
+const PROGRAM_ID = new PublicKey("LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz");
 
 describe("final ABI write builders", () => {
   it("locks the generated instruction discriminators", () => {

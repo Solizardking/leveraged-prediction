@@ -2,7 +2,7 @@
 use solana_pubkey::Pubkey;
 pub struct LeveragedPredictionDecoder;
 pub const PROGRAM_ID: Pubkey =
-    solana_pubkey::Pubkey::from_str_const("AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr");
+    solana_pubkey::Pubkey::from_str_const("LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz");
 
 pub mod accounts;
 pub mod events;

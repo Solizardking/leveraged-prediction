@@ -33,7 +33,9 @@ import { resolve } from "node:path";
 const BASE_RPC = process.env.SOLANA_RPC_ENDPOINT ?? "https://rpc.magicblock.app/devnet";
 const ER_RPC = process.env.EPHEMERAL_RPC_ENDPOINT ?? "https://devnet-as.magicblock.app";
 const ROUTER_RPC = process.env.ROUTER_ENDPOINT ?? "https://devnet.magicblock.app";
-const PROGRAM_ID = new PublicKey("AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr");
+const PROGRAM_ID = new PublicKey(
+  process.env.LEVERAGED_PREDICTION_PROGRAM_ID ?? "LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz",
+);
 const ORACLE_PROGRAM_ID = new PublicKey("PriCems5tHihc6UDXDjzjeawomAwBduWMGAi8ZUjppd");
 const BTC_ORACLE = new PublicKey("71wtTRDY8Gxgw56bXFt2oc6qeAbTxzStdNiC425Z51sr");
 const BTC_FEED_ID = Buffer.from("59642ec3906a38d1267d4aafac36a5e2a47e6d38ed7e5b5843dd287e5e21ab65", "hex");
@@ -87,6 +89,31 @@ async function loadOrCreateMintKeypair() {
   return keypair;
 }
 
+async function resolveCollateralMint(connection, admin) {
+  const fromEnv = process.env.LEVERAGED_PREDICTION_COLLATERAL_MINT;
+  if (fromEnv) {
+    const mint = new PublicKey(fromEnv);
+    const mintState = await getMint(connection, mint, "confirmed");
+    if (mintState.decimals !== 6 || !mintState.mintAuthority?.equals(admin.publicKey)) {
+      throw new Error("Configured collateral mint has unexpected decimals or mint authority");
+    }
+    console.log(`Using existing collateral mint ${mint.toBase58()}`);
+    return mint;
+  }
+  const mintKeypair = await loadOrCreateMintKeypair();
+  const mintInfo = await connection.getAccountInfo(mintKeypair.publicKey, "confirmed");
+  if (!mintInfo) {
+    await createMint(connection, admin, admin.publicKey, null, 6, mintKeypair, { commitment: "confirmed" });
+    console.log(`Created test USDC mint ${mintKeypair.publicKey}`);
+  } else {
+    const mintState = await getMint(connection, mintKeypair.publicKey, "confirmed");
+    if (mintState.decimals !== 6 || !mintState.mintAuthority?.equals(admin.publicKey)) {
+      throw new Error("Persisted test-USDC mint has unexpected configuration");
+    }
+  }
+  return mintKeypair.publicKey;
+}
+
 async function sendTransaction(connection, transaction, payer) {
   const latest = await connection.getLatestBlockhash("confirmed");
   transaction.feePayer = payer.publicKey;
@@ -114,7 +141,9 @@ async function ensureSessionSetupLookupTable(connection, admin, addresses) {
       })).value
     : null;
   if (!lookupTable) {
-    const recentSlot = await connection.getSlot("finalized");
+    // SlotHashes does not include the absolute newest finalized slot on some RPCs;
+    // walk back a little so CreateLookupTable accepts the derivation slot.
+    const recentSlot = Math.max((await connection.getSlot("finalized")) - 32, 0);
     const [createInstruction, derivedAddress] =
       AddressLookupTableProgram.createLookupTable({
         authority: admin.publicKey,
@@ -260,18 +289,7 @@ if (!Buffer.from(oracleInfo.data).subarray(41, 73).equals(BTC_FEED_ID)) {
   throw new Error("Canonical BTC oracle feed ID changed");
 }
 
-const mintKeypair = await loadOrCreateMintKeypair();
-let mintInfo = await base.getAccountInfo(mintKeypair.publicKey, "confirmed");
-if (!mintInfo) {
-  await createMint(base, admin, admin.publicKey, null, 6, mintKeypair, { commitment: "confirmed" });
-  console.log(`Created test USDC mint ${mintKeypair.publicKey}`);
-} else {
-  const mintState = await getMint(base, mintKeypair.publicKey, "confirmed");
-  if (mintState.decimals !== 6 || !mintState.mintAuthority?.equals(admin.publicKey)) {
-    throw new Error("Persisted test-USDC mint has unexpected configuration");
-  }
-}
-const mint = mintKeypair.publicKey;
+const mint = await resolveCollateralMint(base, admin);
 const [rentPda] = deriveRentPda();
 const [vault] = deriveVault(mint);
 const vaultAta = deriveVaultAta(mint, vault);

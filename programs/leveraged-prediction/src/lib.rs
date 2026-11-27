@@ -29,7 +29,7 @@ pub(crate) use instructions::settle_position::__client_accounts_settle_position;
 pub(crate) use instructions::undelegate_user_liquidity::__client_accounts_undelegate_user_liquidity;
 pub(crate) use instructions::withdraw_protocol_fees::__client_accounts_withdraw_protocol_fees;
 
-declare_id!("AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr");
+declare_id!("LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz");
 
 pub const CONFIG_SEED: &[u8] = b"protocol_config";
 pub const MARKET_SEED: &[u8] = b"market";

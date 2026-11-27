@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
 export const DEFAULT_PROGRAM_ID = new PublicKey(
-  "AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr",
+  "LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz",
 );
 
 export const ORACLE_PROGRAM_ID = new PublicKey(

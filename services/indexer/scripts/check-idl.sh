@@ -24,7 +24,7 @@ npx --yes @sevenlabs-hq/carbon-cli@0.12.0 parse \
   -o "$scratch/decoder" \
   -c \
   -s anchor \
-  --program-id AcvFWjSFrLAAWMynqQmBxeBe8wHRTVhhHtB6byatQLFr \
+  --program-id LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz \
   --with-postgres false \
   --with-graphql false \
   --with-serde true >/dev/null
