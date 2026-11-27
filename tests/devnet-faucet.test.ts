@@ -55,3 +55,42 @@ describe("devnet faucet cooldown", () => {
     expect(faucetCooldownRemainingMs(wallet, now + DEVNET_FAUCET_COOLDOWN_MS)).toBe(0);
   });
 });
+
+import { PublicKey } from "@solana/web3.js";
+import { claimReceiptPda } from "@/app/lib/live/pdas";
+import { claimFaucetInstruction } from "@/app/lib/live/instructions";
+
+describe("one-claim receipt wiring", () => {
+  const programId = new PublicKey("LnZGGLELewDTyeGU2QiyrB7sZ3VJ4P9QpMQW85NAqhz");
+
+  it("derives one deterministic receipt PDA per wallet", () => {
+    const wallet = Keypair.generate().publicKey;
+    const other = Keypair.generate().publicKey;
+    expect(claimReceiptPda(programId, wallet).toBase58())
+      .toBe(claimReceiptPda(programId, wallet).toBase58());
+    expect(claimReceiptPda(programId, wallet).toBase58())
+      .not.toBe(claimReceiptPda(programId, other).toBase58());
+  });
+
+  it("builds the claim instruction with the Anchor discriminator and amount", () => {
+    const authority = Keypair.generate().publicKey;
+    const wallet = Keypair.generate().publicKey;
+    const instruction = claimFaucetInstruction(programId, {
+      authority,
+      wallet,
+      claimReceipt: claimReceiptPda(programId, wallet),
+      protocolConfig: Keypair.generate().publicKey,
+      collateralMint: Keypair.generate().publicKey,
+    }, 100_000_000n);
+
+    expect(Array.from(instruction.data.subarray(0, 8)))
+      .toEqual([80, 7, 251, 108, 55, 145, 135, 68]);
+    expect(instruction.data.readBigUInt64LE(8)).toBe(100_000_000n);
+    expect(instruction.keys[0]).toMatchObject({
+      pubkey: authority, isSigner: true, isWritable: true,
+    });
+    expect(instruction.keys[2]).toMatchObject({
+      pubkey: claimReceiptPda(programId, wallet), isWritable: true,
+    });
+  });
+});

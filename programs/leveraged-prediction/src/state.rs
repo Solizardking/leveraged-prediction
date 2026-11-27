@@ -26,6 +26,20 @@ pub struct ProtocolConfig {
     pub bump: u8,
 }
 
+/// One-per-wallet record of a devnet faucet claim. Created with `init` by the
+/// `claim_faucet` instruction under seeds `[CLAIM_RECEIPT_SEED, wallet]`, so
+/// the account's existence is itself the enforcement: a second claim for the
+/// same wallet fails at account initialization and can never mint again.
+#[account]
+#[derive(InitSpace)]
+pub struct ClaimReceipt {
+    pub wallet: Pubkey,
+    pub mint: Pubkey,
+    pub amount: u64,
+    pub claimed_at: i64,
+    pub bump: u8,
+}
+
 #[account]
 #[derive(InitSpace)]
 pub struct Market {
@@ -166,6 +180,7 @@ mod tests {
 
     #[test]
     fn account_storage_budget_is_locked() {
+        assert_eq!(ClaimReceipt::INIT_SPACE, 81);
         assert_eq!(ProtocolConfig::INIT_SPACE, 97);
         assert_eq!(Market::INIT_SPACE, 108);
         assert_eq!(CompactPosition::INIT_SPACE, 55);

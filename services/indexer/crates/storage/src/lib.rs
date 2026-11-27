@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 pub const EVENT_CONTRACT_VERSION: i16 = 2;
 pub const LEGACY_EVENT_CONTRACT_VERSION: i16 = 1;
-pub const SCHEMA_MIGRATION_VERSION: i64 = 5;
+pub const SCHEMA_MIGRATION_VERSION: i64 = 6;
 
 #[derive(Clone)]
 pub struct Storage {
@@ -336,6 +336,18 @@ async fn apply_projection(
                 *expires_at,
             )
             .await?;
+            upsert_trade_created(
+                tx,
+                observation,
+                *market_id,
+                *position_id,
+                user,
+                *entry_price,
+                *collateral,
+                *direction,
+                *expires_at,
+            )
+            .await?;
             track_user_account(
                 tx,
                 observation,
@@ -355,6 +367,17 @@ async fn apply_projection(
             platform_fee_amount,
         } => {
             upsert_position_closed(
+                tx,
+                observation,
+                *market_id,
+                *position_id,
+                *outcome,
+                *payout_amount,
+                *lp_fee_amount,
+                *platform_fee_amount,
+            )
+            .await?;
+            upsert_trade_closed(
                 tx,
                 observation,
                 *market_id,
@@ -863,6 +886,130 @@ async fn upsert_position_closed(
             indexer.positions.user_pubkey IS NULL,
             GREATEST(indexer.positions.last_slot, EXCLUDED.last_slot)
         )
+        "#,
+    )
+    .bind(&observation.source.network)
+    .bind(&observation.program_id)
+    .bind(i32::from(market_id))
+    .bind(i64::from(position_id))
+    .bind(outcome.lifecycle_status())
+    .bind(outcome.as_str())
+    .bind(i64::try_from(payout_amount).context("payout exceeds Postgres BIGINT")?)
+    .bind(i64::try_from(lp_fee_amount).context("LP fee exceeds Postgres BIGINT")?)
+    .bind(i64::try_from(platform_fee_amount).context("platform fee exceeds Postgres BIGINT")?)
+    .bind(observation.block_time)
+    .bind(EVENT_CONTRACT_VERSION)
+    .bind(observation.source.id)
+    .bind(&observation.signature)
+    .bind(observation.slot)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+/// Every-trade record, open side. Mirrors `upsert_position_created`, and
+/// completes a partial row left by an earlier close: the create fills the
+/// user and open fields and clears `is_partial`, without touching the
+/// close-side fields or the lifecycle already recorded from the close.
+#[allow(clippy::too_many_arguments)]
+async fn upsert_trade_created(
+    tx: &mut Transaction<'_, Postgres>,
+    observation: &Observation,
+    market_id: u16,
+    position_id: u32,
+    user: &str,
+    entry_price: i64,
+    collateral: u32,
+    direction: Direction,
+    expires_at: u32,
+) -> Result<()> {
+    sqlx::query(
+        r#"
+        INSERT INTO indexer.trades (
+            network, program_id, market_id, position_id, user_pubkey, entry_price,
+            collateral, direction, expires_at, lifecycle_status, opened_at,
+            event_contract_version, is_partial, created_source_id, created_signature, last_slot
+        )
+        VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9),
+            'open', to_timestamp($9 - 10), $10, false, $11, $12, $13
+        )
+        ON CONFLICT (network, program_id, market_id, position_id)
+        DO UPDATE SET
+            user_pubkey = EXCLUDED.user_pubkey,
+            entry_price = EXCLUDED.entry_price,
+            collateral = EXCLUDED.collateral,
+            direction = EXCLUDED.direction,
+            expires_at = EXCLUDED.expires_at,
+            opened_at = EXCLUDED.opened_at,
+            created_source_id = EXCLUDED.created_source_id,
+            created_signature = EXCLUDED.created_signature,
+            event_contract_version = GREATEST(
+                indexer.trades.event_contract_version,
+                EXCLUDED.event_contract_version
+            ),
+            is_partial = false,
+            last_slot = GREATEST(indexer.trades.last_slot, EXCLUDED.last_slot),
+            updated_at = now()
+        "#,
+    )
+    .bind(&observation.source.network)
+    .bind(&observation.program_id)
+    .bind(i32::from(market_id))
+    .bind(i64::from(position_id))
+    .bind(user)
+    .bind(entry_price)
+    .bind(i64::from(collateral))
+    .bind(direction.as_str())
+    .bind(i64::from(expires_at))
+    .bind(EVENT_CONTRACT_VERSION)
+    .bind(observation.source.id)
+    .bind(&observation.signature)
+    .bind(observation.slot)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+/// Every-trade record, close side. A close indexed before its create lands
+/// as a partial row (no user / open fields); `is_partial` stays true until
+/// the create arrives, exactly mirroring `upsert_position_closed`.
+#[allow(clippy::too_many_arguments)]
+async fn upsert_trade_closed(
+    tx: &mut Transaction<'_, Postgres>,
+    observation: &Observation,
+    market_id: u16,
+    position_id: u32,
+    outcome: PositionOutcome,
+    payout_amount: u64,
+    lp_fee_amount: u64,
+    platform_fee_amount: u64,
+) -> Result<()> {
+    sqlx::query(
+        r#"
+        INSERT INTO indexer.trades (
+            network, program_id, market_id, position_id, lifecycle_status, outcome,
+            payout_amount, lp_fee_amount, platform_fee_amount, closed_at,
+            event_contract_version, is_partial, closed_source_id, closed_signature, last_slot
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, $12, $13, $14)
+        ON CONFLICT (network, program_id, market_id, position_id)
+        DO UPDATE SET
+            lifecycle_status = EXCLUDED.lifecycle_status,
+            outcome = EXCLUDED.outcome,
+            payout_amount = EXCLUDED.payout_amount,
+            lp_fee_amount = EXCLUDED.lp_fee_amount,
+            platform_fee_amount = EXCLUDED.platform_fee_amount,
+            closed_at = COALESCE(indexer.trades.closed_at, EXCLUDED.closed_at),
+            closed_source_id = EXCLUDED.closed_source_id,
+            closed_signature = EXCLUDED.closed_signature,
+            event_contract_version = GREATEST(
+                indexer.trades.event_contract_version,
+                EXCLUDED.event_contract_version
+            ),
+            is_partial = indexer.trades.user_pubkey IS NULL,
+            last_slot = GREATEST(indexer.trades.last_slot, EXCLUDED.last_slot),
+            updated_at = now()
         "#,
     )
     .bind(&observation.source.network)

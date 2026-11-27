@@ -13,6 +13,7 @@ use instructions::*;
 use state::{Direction, MarketMode};
 
 pub(crate) use instructions::claim_fallback_payout::__client_accounts_claim_fallback_payout;
+pub(crate) use instructions::claim_faucet::__client_accounts_claim_faucet;
 pub(crate) use instructions::delegate_market::__client_accounts_delegate_market;
 pub(crate) use instructions::delegate_user_liquidity::__client_accounts_delegate_user_liquidity;
 pub(crate) use instructions::delegate_user_positions::__client_accounts_delegate_user_positions;
@@ -36,6 +37,7 @@ pub const MARKET_SEED: &[u8] = b"market";
 pub const USER_POSITIONS_SEED: &[u8] = b"user_positions";
 pub const USER_LIQUIDITY_SEED: &[u8] = b"user_liquidity";
 pub const FEE_AUTHORITY_SEED: &[u8] = b"fee_authority";
+pub const CLAIM_RECEIPT_SEED: &[u8] = b"claim_receipt";
 pub const ORACLE_PROGRAM_ID: Pubkey = pubkey!("PriCems5tHihc6UDXDjzjeawomAwBduWMGAi8ZUjppd");
 pub const ORACLE_EXPONENT: i32 = 8;
 pub const COLLATERAL_DECIMALS: u8 = 6;
@@ -139,6 +141,13 @@ pub struct ProtocolFeesWithdrawn {
 }
 
 #[event]
+pub struct FaucetClaimed {
+    pub wallet: Pubkey,
+    pub mint: Pubkey,
+    pub amount: u64,
+}
+
+#[event]
 pub struct FallbackPayoutClaimed {
     pub user: Pubkey,
     pub destination: Pubkey,
@@ -179,6 +188,10 @@ pub mod leveraged_prediction {
 
     pub fn claim_fallback_payout(ctx: Context<ClaimFallbackPayout>) -> Result<()> {
         instructions::claim_fallback_payout::handler(ctx)
+    }
+
+    pub fn claim_faucet(ctx: Context<ClaimFaucet>, amount: u64) -> Result<()> {
+        instructions::claim_faucet::handler(ctx, amount)
     }
 
     pub fn initialize_market(
@@ -350,6 +363,38 @@ mod address_tests {
 
         assert_ne!(first_positions, first_liquidity);
         assert_ne!(first_positions, second_positions);
+    }
+
+    #[test]
+    fn claim_receipt_pdas_are_wallet_scoped() {
+        let first_wallet = Pubkey::new_unique();
+        let second_wallet = Pubkey::new_unique();
+        let (first_receipt, first_bump) =
+            Pubkey::find_program_address(&[CLAIM_RECEIPT_SEED, first_wallet.as_ref()], &crate::ID);
+        let (same_receipt, same_bump) =
+            Pubkey::find_program_address(&[CLAIM_RECEIPT_SEED, first_wallet.as_ref()], &crate::ID);
+        let (second_receipt, _) =
+            Pubkey::find_program_address(&[CLAIM_RECEIPT_SEED, second_wallet.as_ref()], &crate::ID);
+        let (first_positions, _) =
+            Pubkey::find_program_address(&[USER_POSITIONS_SEED, first_wallet.as_ref()], &crate::ID);
+
+        // Deterministic per wallet: a second claim targets the same account
+        // and fails at `init`; a different wallet gets its own receipt.
+        assert_eq!(first_receipt, same_receipt);
+        assert_eq!(first_bump, same_bump);
+        assert_ne!(first_receipt, second_receipt);
+        assert_ne!(first_receipt, first_positions);
+    }
+
+    #[test]
+    fn claim_receipt_layout_and_event_payload_are_locked() {
+        assert_eq!(8 + state::ClaimReceipt::INIT_SPACE, 89);
+        let claimed = FaucetClaimed {
+            wallet: Pubkey::new_unique(),
+            mint: Pubkey::new_unique(),
+            amount: 100_000_000,
+        };
+        assert_eq!(serialized(&claimed).len(), 32 + 32 + 8);
     }
 
     #[test]

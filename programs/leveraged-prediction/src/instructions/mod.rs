@@ -16,24 +16,26 @@ use crate::math::{
     require_valid_withdrawal_remainder, shares_for_deposit,
 };
 use crate::state::{
-    CompactPosition, Direction, Market, MarketMode, ProtocolConfig, UserLiquidity, UserPositions,
+    ClaimReceipt, CompactPosition, Direction, Market, MarketMode, ProtocolConfig, UserLiquidity,
+    UserPositions,
 };
 use crate::{
-    settlement_crank_signer, settlement_task_id, FallbackPayoutClaimed, LiquidityDeposited,
-    MarketModeChanged, PositionClosed, PositionCreated, PositionOutcome, ProtocolFeesWithdrawn,
-    WithdrawalCancelled, WithdrawalExecuted, WithdrawalRequested, COLLATERAL_DECIMALS, CONFIG_SEED,
-    FEE_AUTHORITY_SEED, LEVERAGE, MARKET_SEED, MAX_MARKET_EQUITY, MAX_POSITION_COLLATERAL,
-    MIN_MARKET_EQUITY, MIN_POSITION_COLLATERAL, ORACLE_EXPONENT, ORACLE_MAX_AGE_SECONDS,
-    ORACLE_MAX_CONFIDENCE_BPS, ORACLE_PROGRAM_ID, POSITION_DURATION_SECONDS, PROFIT_FEE_BPS,
-    PROTOCOL_FEE_SHARE_BPS, SAFETY_BUFFER_BPS, SETTLEMENT_BUFFER_SECONDS,
-    SETTLEMENT_TASK_INTERVAL_MILLIS, SETTLEMENT_TASK_ITERATIONS, USER_LIQUIDITY_SEED,
-    USER_OPEN_COLLATERAL_BPS, USER_POSITIONS_SEED,
+    settlement_crank_signer, settlement_task_id, FallbackPayoutClaimed, FaucetClaimed,
+    LiquidityDeposited, MarketModeChanged, PositionClosed, PositionCreated, PositionOutcome,
+    ProtocolFeesWithdrawn, WithdrawalCancelled, WithdrawalExecuted, WithdrawalRequested,
+    CLAIM_RECEIPT_SEED, COLLATERAL_DECIMALS, CONFIG_SEED, FEE_AUTHORITY_SEED, LEVERAGE,
+    MARKET_SEED, MAX_MARKET_EQUITY, MAX_POSITION_COLLATERAL, MIN_MARKET_EQUITY,
+    MIN_POSITION_COLLATERAL, ORACLE_EXPONENT, ORACLE_MAX_AGE_SECONDS, ORACLE_MAX_CONFIDENCE_BPS,
+    ORACLE_PROGRAM_ID, POSITION_DURATION_SECONDS, PROFIT_FEE_BPS, PROTOCOL_FEE_SHARE_BPS,
+    SAFETY_BUFFER_BPS, SETTLEMENT_BUFFER_SECONDS, SETTLEMENT_TASK_INTERVAL_MILLIS,
+    SETTLEMENT_TASK_ITERATIONS, USER_LIQUIDITY_SEED, USER_OPEN_COLLATERAL_BPS, USER_POSITIONS_SEED,
 };
 
 const DELEGATED_STATE_COMMIT_FREQUENCY_MS: u32 = 10_000;
 
 pub mod cancel_withdrawal;
 pub mod claim_fallback_payout;
+pub mod claim_faucet;
 pub mod delegate_market;
 pub mod delegate_user_liquidity;
 pub mod delegate_user_positions;
@@ -51,6 +53,7 @@ pub mod undelegate_user_liquidity;
 pub mod withdraw_protocol_fees;
 
 pub use claim_fallback_payout::ClaimFallbackPayout;
+pub use claim_faucet::ClaimFaucet;
 pub use delegate_market::DelegateMarket;
 pub use delegate_user_liquidity::DelegateUserLiquidity;
 pub use delegate_user_positions::DelegateUserPositions;

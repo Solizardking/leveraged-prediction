@@ -1,23 +1,30 @@
 import { DELEGATION_PROGRAM_ID } from "@magicblock-labs/ephemeral-rollups-sdk";
 import {
+  createAssociatedTokenAccountInstruction,
+  createMintToInstruction,
   getAccount,
   getAssociatedTokenAddressSync,
   getMint,
-  getOrCreateAssociatedTokenAccount,
-  mintTo,
 } from "@solana/spl-token";
 import {
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
+  sendAndConfirmTransaction,
+  Transaction,
 } from "@solana/web3.js";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { readLiveConfig } from "@/app/lib/live/config";
 import { decodeProtocolConfig } from "@/app/lib/live/decode";
-import { marketPda, protocolConfigPda } from "@/app/lib/live/pdas";
+import { claimFaucetInstruction } from "@/app/lib/live/instructions";
+import {
+  claimReceiptPda,
+  marketPda,
+  protocolConfigPda,
+} from "@/app/lib/live/pdas";
 import {
   getDelegationStatus,
   normalizeErEndpoint,
@@ -192,6 +199,20 @@ async function fundWallet(wallet: PublicKey): Promise<DevnetFaucetResult> {
   const collateralMint = new PublicKey(
     decodeProtocolConfig(Buffer.from(protocolInfo.data)).collateralMint,
   );
+  // One claim per wallet, enforced on-chain by the ClaimReceipt PDA. If the
+  // receipt already exists this wallet has claimed and is refused outright,
+  // before any mint or airdrop. (Pre-upgrade, receipts never exist and this
+  // check is inert; the guarantee starts with the program upgrade.)
+  const claimReceipt = claimReceiptPda(config.programId, wallet);
+  const existingReceipt = await baseConnection.getAccountInfo(
+    claimReceipt,
+    "confirmed",
+  );
+  if (existingReceipt) {
+    throw new Error(
+      "This wallet has already claimed its test funds; the on-chain claim receipt prevents a second claim",
+    );
+  }
   const route = await getDelegationStatus(config.routerEndpoint, market.toBase58());
   if (!route.isDelegated || !route.fqdn) {
     throw new Error("Router did not return the active Market ER");
@@ -222,22 +243,44 @@ async function fundWallet(wallet: PublicKey): Promise<DevnetFaucetResult> {
   try {
     const usdcShortfall = requiredTopUp(DEVNET_FAUCET_USDC_MINOR, baseUsdc, erUsdc);
     if (usdcShortfall > 0n) {
-      await getOrCreateAssociatedTokenAccount(
-        baseConnection,
-        authority,
-        collateralMint,
-        wallet,
-        false,
-        "confirmed",
+      // Mint and claim receipt land in one authority-signed transaction:
+      // the claim_faucet instruction creates the wallet's ClaimReceipt PDA
+      // (init — a second claim fails on-chain), and the mint follows in the
+      // same transaction, so funds can never arrive without the receipt.
+      const transaction = new Transaction();
+      if (baseUsdcAccount === null) {
+        transaction.add(
+          createAssociatedTokenAccountInstruction(
+            authority.publicKey,
+            walletTokenAccount,
+            wallet,
+            collateralMint,
+          ),
+        );
+      }
+      transaction.add(
+        claimFaucetInstruction(
+          config.programId,
+          {
+            authority: authority.publicKey,
+            wallet,
+            claimReceipt,
+            protocolConfig,
+            collateralMint,
+          },
+          usdcShortfall,
+        ),
+        createMintToInstruction(
+          collateralMint,
+          walletTokenAccount,
+          authority.publicKey,
+          usdcShortfall,
+        ),
       );
-      usdcSignature = await mintTo(
+      usdcSignature = await sendAndConfirmTransaction(
         baseConnection,
-        authority,
-        collateralMint,
-        walletTokenAccount,
-        authority,
-        usdcShortfall,
-        [],
+        transaction,
+        [authority],
         { commitment: "confirmed" },
       );
       [baseUsdcAccount, erUsdcAccount] = await Promise.all([

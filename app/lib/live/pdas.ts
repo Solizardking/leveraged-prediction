@@ -37,6 +37,16 @@ export function userLiquidityPda(
   )[0];
 }
 
+export function claimReceiptPda(
+  programId: PublicKey,
+  wallet: PublicKey,
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("claim_receipt"), wallet.toBuffer()],
+    programId,
+  )[0];
+}
+
 export function feeAuthorityPda(
   programId: PublicKey,
   market: PublicKey,
