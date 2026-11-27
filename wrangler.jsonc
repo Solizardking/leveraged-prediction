@@ -1,0 +1,21 @@
+{
+  // Cloudflare Worker deployment for the leveraged-prediction frontend.
+  // Built with OpenNext (@opennextjs/cloudflare): `pnpm cf:build` then `pnpm cf:deploy`.
+  // The Vercel deployment is untouched; this Worker is an additional target.
+  "name": "leveraged-prediction",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-09-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    // Privacy Rings: enabled on this Worker (owner order). The public flag is
+    // build-time inlined (NEXT_PUBLIC_PRIVACY_RINGS_ENABLED=1 in the build env);
+    // this var is the server-side gate read by app/lib/privacy/config.ts.
+    "PRIVACY_RINGS_ENABLED": "1",
+    // HELIUS_RPC_URL is a Worker secret (wrangler secret put), never a var.
+    "HELIUS_CLUSTER": "mainnet"
+  }
+}
