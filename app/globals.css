@@ -1678,3 +1678,197 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
 .panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .aux-panel .checkbox { display: flex; align-items: center; gap: 8px; }
 .confirm-code strong { color: var(--ink); letter-spacing: 0.08em; }
+
+/* ── oracle markets page ────────────────────────────── */
+.oracle-layout {
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  padding: 54px 24px 72px;
+  overflow-y: auto;
+}
+.oracle-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 0.42fr);
+  align-items: end;
+  gap: 36px;
+}
+.oracle-intro { max-width: 610px; }
+.oracle-intro h1 {
+  margin: 7px 0 8px;
+  font-size: clamp(34px, 5vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -1.1px;
+}
+.oracle-intro p {
+  margin: 0;
+  max-width: 540px;
+  color: var(--mut);
+  font-size: 15px;
+}
+.oracle-mode-card {
+  border: 1px solid var(--hair);
+  border-radius: 16px;
+  background: var(--card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+.oracle-mode-card small {
+  color: var(--mut);
+  font-size: 12px;
+}
+.oracle-toggle {
+  display: inline-flex;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 3px;
+}
+.oracle-toggle button {
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mut);
+}
+.oracle-toggle button.is-active {
+  background: var(--ink);
+  color: var(--bg);
+}
+.oracle-error {
+  margin-top: 22px;
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  color: var(--down);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.oracle-error button {
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: underline;
+}
+.oracle-group,
+.oracle-privacy {
+  margin-top: 32px;
+  border: 1px solid var(--hair);
+  border-radius: 16px;
+  background: var(--card);
+  overflow: hidden;
+}
+.oracle-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+}
+.oracle-section-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 750;
+}
+.oracle-section-heading p {
+  margin: 2px 0 0;
+  color: var(--mut);
+  font-size: 12.5px;
+}
+.oracle-group-count {
+  padding: 5px 10px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  color: var(--mut);
+  font-size: 11.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.oracle-table-wrap { overflow-x: auto; }
+.oracle-group table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.oracle-group th,
+.oracle-group td {
+  padding: 13px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--hair);
+  font-size: 14.5px;
+  white-space: nowrap;
+}
+.oracle-group th {
+  color: var(--mut);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.oracle-group tbody tr:last-child td { border-bottom: 0; }
+.oracle-market-name { font-weight: 700; }
+.oracle-market-name small {
+  display: block;
+  color: var(--mut);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.oracle-feed-state {
+  display: inline-block;
+  padding: 4px 9px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--mut);
+}
+.oracle-feed-state.stale {
+  color: var(--wait);
+  background: var(--wait-tint);
+  border-color: color-mix(in srgb, var(--wait) 35%, var(--hair));
+}
+.oracle-feed-state.unavailable {
+  color: var(--down);
+  border-color: color-mix(in srgb, var(--down) 35%, var(--hair));
+}
+.oracle-bar-time {
+  display: block;
+  margin-top: 3px;
+  color: var(--mut);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.oracle-privacy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--hair);
+}
+.oracle-privacy-grid > div {
+  padding: 20px;
+  border-right: 1px solid var(--hair);
+}
+.oracle-privacy-grid > div:last-child { border-right: 0; }
+.oracle-privacy-grid strong {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.oracle-privacy-grid span {
+  color: var(--mut);
+  font-size: 12.5px;
+}
+@media (max-width: 860px) {
+  .oracle-hero { grid-template-columns: 1fr; }
+  .oracle-privacy-grid { grid-template-columns: 1fr; }
+  .oracle-privacy-grid > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  .oracle-privacy-grid > div:last-child { border-bottom: 0; }
+}

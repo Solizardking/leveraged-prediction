@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type PrimaryRoute = "trade" | "liquidity" | "leaderboard" | "privacy";
+type PrimaryRoute = "trade" | "liquidity" | "leaderboard" | "privacy" | "oracle";
 
 export function RouteNav({ active }: { active: PrimaryRoute }) {
   return (
@@ -27,6 +27,13 @@ export function RouteNav({ active }: { active: PrimaryRoute }) {
         aria-current={active === "privacy" ? "page" : undefined}
       >
         Privacy
+      </Link>
+      <Link
+        href="/oracle"
+        aria-current={active === "oracle" ? "page" : undefined}
+      >
+        <span className="route-label-full">Oracle markets</span>
+        <span className="route-label-short" aria-hidden="true">Oracle</span>
       </Link>
     </nav>
   );
