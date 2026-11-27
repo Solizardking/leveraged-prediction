@@ -5,6 +5,7 @@ export interface LeaderboardEntry {
   wins: number;
   losses: number;
   volume: string;
+  netPnl: string;
 }
 
 export interface UserLeaderboardStats {
@@ -14,6 +15,7 @@ export interface UserLeaderboardStats {
   wins: number;
   losses: number;
   volume: string;
+  netPnl: string;
 }
 
 export interface LeaderboardResult {
@@ -53,6 +55,14 @@ function readMinorUnits(value: unknown, field: string): string {
   return value;
 }
 
+function readSignedMinorUnits(value: unknown, field: string): string {
+  if (typeof value !== "string" || !/^-?\d+$/.test(value)) {
+    throw new Error(`Indexer returned an invalid ${field}`);
+  }
+  // Normalize negative zero so formatting and totals stay canonical.
+  return value === "-0" ? "0" : value;
+}
+
 function readAddress(value: unknown): string {
   if (
     typeof value !== "string" ||
@@ -74,6 +84,7 @@ function parseEntry(value: unknown): LeaderboardEntry {
     wins: readCount(value.wins, "win count"),
     losses: readCount(value.losses, "loss count"),
     volume: readMinorUnits(value.volume, "volume"),
+    netPnl: readSignedMinorUnits(value.net_pnl, "net PnL"),
   };
 }
 
@@ -87,6 +98,7 @@ function parseStats(value: unknown): UserLeaderboardStats {
     wins: readCount(value.wins, "win count"),
     losses: readCount(value.losses, "loss count"),
     volume: readMinorUnits(value.volume, "volume"),
+    netPnl: readSignedMinorUnits(value.net_pnl, "net PnL"),
   };
 }
 
@@ -134,12 +146,15 @@ export function leaderboardApiUrl(): string | null {
 }
 
 export function formatLeaderboardUsdc(minorUnits: string | null): string {
-  if (minorUnits === null || !/^\d+$/.test(minorUnits)) return "—";
-  const digits = minorUnits.padStart(7, "0");
+  if (minorUnits === null || !/^-?\d+$/.test(minorUnits)) return "—";
+  const negative = minorUnits.startsWith("-");
+  const absolute = negative ? minorUnits.slice(1) : minorUnits;
+  const digits = absolute.padStart(7, "0");
   const whole = digits.slice(0, -6).replace(/^0+(?=\d)/, "");
   const fraction = digits.slice(-6, -4);
   const grouped = BigInt(whole).toLocaleString("en-US");
-  return `$${grouped}.${fraction}`;
+  const sign = negative && (whole !== "0" || fraction !== "00") ? "-" : "";
+  return `${sign}$${grouped}.${fraction}`;
 }
 
 export async function fetchLeaderboardResult(

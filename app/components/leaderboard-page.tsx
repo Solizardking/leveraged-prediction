@@ -122,6 +122,14 @@ export function LeaderboardPage() {
               </dd>
             </div>
             <div>
+              <dt>Net PnL</dt>
+              <dd className="num">
+                {currentWallet && userStats
+                  ? formatLeaderboardUsdc(userStats.netPnl)
+                  : "—"}
+              </dd>
+            </div>
+            <div>
               <dt>Trades</dt>
               <dd className="num">
                 {currentWallet && userStats ? userStats.trades : "—"}
@@ -165,6 +173,7 @@ export function LeaderboardPage() {
                   <th scope="col">Rank</th>
                   <th scope="col">Trader</th>
                   <th scope="col">Volume</th>
+                  <th scope="col">Net PnL</th>
                   <th scope="col">Trades</th>
                   <th scope="col">Wins</th>
                   <th scope="col">Losses</th>
@@ -184,6 +193,7 @@ export function LeaderboardPage() {
                       </span>
                     </td>
                     <td className="num">{formatLeaderboardUsdc(entry.volume)}</td>
+                    <td className="num">{formatLeaderboardUsdc(entry.netPnl)}</td>
                     <td className="num">{entry.trades}</td>
                     <td className="num">{entry.wins}</td>
                     <td className="num">{entry.losses}</td>

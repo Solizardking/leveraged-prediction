@@ -20,6 +20,7 @@ pub struct FixtureReport {
     transactions: i64,
     instructions: i64,
     positions: i64,
+    trades_close_before_create_complete: bool,
     liquidity_events: i64,
     fee_events: i64,
     account_observations: i64,
@@ -126,11 +127,15 @@ pub async fn replay(database_url: &str) -> Result<FixtureReport> {
     ensure!(position.lp_fee_amount == Some(80_000));
     ensure!(position.platform_fee_amount == Some(20_000));
 
+    let trades_close_before_create_complete =
+        verify_close_before_create_trade(&storage, start).await?;
+
     Ok(FixtureReport {
         passes: 2,
         transactions,
         instructions,
         positions,
+        trades_close_before_create_complete,
         liquidity_events,
         fee_events,
         account_observations,
@@ -140,6 +145,92 @@ pub async fn replay(database_url: &str) -> Result<FixtureReport> {
         cursor,
         history,
     })
+}
+
+/// The every-trade record must survive the close being indexed before the
+/// create: the close lands as a partial trade, and the later create completes
+/// it with the user and open fields instead of dropping or duplicating it.
+async fn verify_close_before_create_trade(storage: &Storage, start: DateTime<Utc>) -> Result<bool> {
+    let source = storage
+        .ensure_source("trades-fixture", "er", "fixture://trades")
+        .await?;
+    let event = |index: i64, signature: &str, event: DomainEvent| Observation {
+        source: source.clone(),
+        program_id: PROGRAM_ID.to_owned(),
+        signature: signature.to_owned(),
+        slot: index,
+        block_time: Some(start + TimeDelta::seconds(index)),
+        instruction_path: format!("0/{index}"),
+        cursor_name: "trades-fixture".to_owned(),
+        cursor_value: index.to_string(),
+        event,
+    };
+    // Close first, on purpose.
+    storage
+        .apply(&event(
+            1,
+            "fixture-trade-close-first-v2",
+            DomainEvent::PositionClosed {
+                market_id: 1,
+                position_id: 8,
+                outcome: PositionOutcome::Won,
+                payout_amount: 1_900_000,
+                lp_fee_amount: 80_000,
+                platform_fee_amount: 20_000,
+            },
+        ))
+        .await?;
+    let partial = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT is_partial AND user_pubkey IS NULL
+        FROM indexer.trades
+        WHERE network = 'trades-fixture' AND program_id = $1
+          AND market_id = 1 AND position_id = 8
+        "#,
+    )
+    .bind(PROGRAM_ID)
+    .fetch_one(storage.pool())
+    .await?;
+    ensure!(
+        partial,
+        "close-before-create trade was not recorded as partial"
+    );
+
+    storage
+        .apply(&event(
+            2,
+            "fixture-trade-create-late-v2",
+            DomainEvent::PositionCreated {
+                market_id: 1,
+                position_id: 8,
+                user: USER.to_owned(),
+                entry_price: 100_000,
+                collateral: 1_000_000,
+                direction: Direction::Up,
+                expires_at: u32::try_from(start.timestamp() + 10).unwrap(),
+            },
+        ))
+        .await?;
+    let (user, is_partial, lifecycle, net_pnl) =
+        sqlx::query_as::<_, (Option<String>, bool, String, Option<i64>)>(
+            r#"
+        SELECT user_pubkey, is_partial, lifecycle_status, net_pnl
+        FROM indexer.trades
+        WHERE network = 'trades-fixture' AND program_id = $1
+          AND market_id = 1 AND position_id = 8
+        "#,
+        )
+        .bind(PROGRAM_ID)
+        .fetch_one(storage.pool())
+        .await?;
+    ensure!(user.as_deref() == Some(USER), "trade lost its user");
+    ensure!(!is_partial, "trade stayed partial after its create arrived");
+    ensure!(
+        lifecycle == "settled",
+        "trade lifecycle was reset by the create"
+    );
+    ensure!(net_pnl == Some(900_000), "trade net PnL drifted");
+    Ok(true)
 }
 
 pub async fn record_legacy(database_url: &str) -> Result<LegacyReport> {

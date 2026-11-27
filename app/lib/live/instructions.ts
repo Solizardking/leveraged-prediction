@@ -51,6 +51,9 @@ const OPEN_POSITION_DISCRIMINATOR = Uint8Array.from([
 const CLAIM_FALLBACK_PAYOUT_DISCRIMINATOR = Uint8Array.from([
   215, 117, 24, 176, 107, 179, 59, 212,
 ]);
+const CLAIM_FAUCET_DISCRIMINATOR = Uint8Array.from([
+  80, 7, 251, 108, 55, 145, 135, 68,
+]);
 
 function concatBytes(...parts: Uint8Array[]): Uint8Array {
   const size = parts.reduce((sum, part) => sum + part.length, 0);
@@ -315,6 +318,31 @@ export function claimFallbackPayoutInstruction(
       { pubkey: accounts.userTokenAccount, isSigner: false, isWritable: true },
       { pubkey: accounts.collateralMint, isSigner: false, isWritable: false },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+  });
+}
+
+export function claimFaucetInstruction(
+  programId: PublicKey,
+  accounts: {
+    authority: PublicKey;
+    wallet: PublicKey;
+    claimReceipt: PublicKey;
+    protocolConfig: PublicKey;
+    collateralMint: PublicKey;
+  },
+  amount: bigint,
+): TransactionInstruction {
+  return new TransactionInstruction({
+    programId,
+    data: Buffer.from(concatBytes(CLAIM_FAUCET_DISCRIMINATOR, u64(amount))),
+    keys: [
+      { pubkey: accounts.authority, isSigner: true, isWritable: true },
+      { pubkey: accounts.wallet, isSigner: false, isWritable: false },
+      { pubkey: accounts.claimReceipt, isSigner: false, isWritable: true },
+      { pubkey: accounts.protocolConfig, isSigner: false, isWritable: false },
+      { pubkey: accounts.collateralMint, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
   });
 }

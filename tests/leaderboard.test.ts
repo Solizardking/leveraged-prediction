@@ -24,6 +24,9 @@ describe("leaderboard indexer client", () => {
     expect(formatLeaderboardUsdc("123456789")).toBe("$123.45");
     expect(formatLeaderboardUsdc("1000000000000")).toBe("$1,000,000.00");
     expect(formatLeaderboardUsdc(null)).toBe("—");
+    expect(formatLeaderboardUsdc("-123456789")).toBe("-$123.45");
+    expect(formatLeaderboardUsdc("-1000000")).toBe("-$1.00");
+    expect(formatLeaderboardUsdc("-1")).toBe("$0.00");
   });
 
   it("paginates rankings, totals volume, and reads connected user stats", async () => {
@@ -37,6 +40,7 @@ describe("leaderboard indexer client", () => {
           wins: 3,
           losses: 1,
           volume: "1000000",
+          net_pnl: "-250000",
         }, { stale: false });
       }
       if (url.searchParams.get("cursor") === "page-2") {
@@ -47,6 +51,7 @@ describe("leaderboard indexer client", () => {
           wins: 1,
           losses: 1,
           volume: "2500000",
+          net_pnl: "500000",
         }], { stale: true });
       }
       return jsonResponse([{
@@ -56,6 +61,7 @@ describe("leaderboard indexer client", () => {
         wins: 3,
         losses: 1,
         volume: "1000000",
+        net_pnl: "-250000",
       }], { stale: false, next_cursor: "page-2" });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -70,6 +76,9 @@ describe("leaderboard indexer client", () => {
     expect(result.entries).toHaveLength(2);
     expect(result.totalVolume).toBe("3500000");
     expect(result.userStats).toMatchObject({ rank: 1, trades: 4, wins: 3 });
+    expect(result.entries[0].netPnl).toBe("-250000");
+    expect(result.entries[1].netPnl).toBe("500000");
+    expect(result.userStats?.netPnl).toBe("-250000");
     expect(result.stale).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
